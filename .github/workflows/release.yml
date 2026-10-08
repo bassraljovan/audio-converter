@@ -1,7 +1,8 @@
 name: Build & release
 
-# Push a tag like v1.0.1 to build the Windows and Mac apps and attach them to a
-# GitHub release. "Run workflow" on the Actions tab builds without releasing.
+# Builds the Windows and Mac apps and attaches them to the GitHub release
+# v<version from package.json>, creating the release (and its tag) if needed.
+# Start it from the Actions tab ("Run workflow") or by pushing a tag like v1.0.1.
 on:
   push:
     tags: ['v*']
@@ -13,13 +14,16 @@ permissions:
 jobs:
   # Create the release once up front so the three build jobs don't race to create it.
   release:
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - run: gh release view "$TAG" -R "$REPO" || gh release create "$TAG" -R "$REPO" --title "Audio Converter $TAG" --notes-file - <<< "$NOTES"
+      - uses: actions/checkout@v4
+      - name: Create release
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          gh release view "$TAG" -R "$REPO" ||
+            gh release create "$TAG" -R "$REPO" --target "$GITHUB_SHA" --title "Audio Converter $TAG" --notes "$NOTES"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
           NOTES: |
             **Windows:** download `Audio-Converter-…-Windows-Setup.exe` to install, or `…-Windows-Portable.exe` to run without installing.
@@ -31,7 +35,6 @@ jobs:
 
   build:
     needs: release
-    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -51,7 +54,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build
-        run: npx electron-builder ${{ matrix.args }} --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        run: npx electron-builder ${{ matrix.args }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false

@@ -65,13 +65,9 @@ A build you make yourself on your own Mac opens straight away, with no Terminal 
 
 ## Publishing a new version
 
-Bump `version` in `package.json`, commit, then push a tag:
-
-```bash
-git tag v1.0.1 && git push origin v1.0.1
-```
-
-GitHub Actions (`.github/workflows/release.yml`) builds the Windows and Mac apps and attaches them to a new release.
+Bump `version` in `package.json` and push. Then, on GitHub, open **Actions → Build & release → Run workflow**
+(or push a tag such as `v1.0.1`). GitHub Actions (`.github/workflows/release.yml`) builds the Windows and Mac apps
+and attaches them to a release named after the version.
 
 ## Project layout
 
