@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src file: 'self'" />
+  <title>Audio Converter</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 12h2M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      <span>Audio Converter</span>
+    </div>
+    <div class="tb-group">
+      <button class="tb" id="addFiles" title="Add files (Ctrl+O)">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add files</span>
+      </button>
+      <button class="tb" id="addFolder" title="Add every audio file in a folder">
+        <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Add folder</span>
+      </button>
+    </div>
+    <div class="tb-group">
+      <button class="tb" id="removeSel" title="Remove selected (Delete)" disabled>
+        <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg><span>Remove</span>
+      </button>
+      <button class="tb" id="clearAll" title="Clear the list" disabled>
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg><span>Clear</span>
+      </button>
+      <button class="tb" id="clearDone" title="Remove finished files from the list" disabled>
+        <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>Clear finished</span>
+      </button>
+    </div>
+    <div class="spacer"></div>
+    <button class="primary" id="convertBtn" disabled>
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <span id="convertLabel">Convert</span>
+    </button>
+  </header>
+
+  <main class="body">
+    <section class="queue" id="queue">
+      <div class="q-head">
+        <div></div>
+        <div>File</div>
+        <div>Source</div>
+        <div class="num">Length</div>
+        <div class="num">Size</div>
+        <div>Status</div>
+        <div></div>
+      </div>
+      <div class="q-list" id="list" tabindex="0" role="listbox" aria-multiselectable="true"></div>
+      <div class="empty" id="empty">
+        <div class="empty-icon">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 30V8M15 17l9-9 9 9M8 30v6a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-6"/></svg>
+        </div>
+        <h2>Drop audio files here</h2>
+        <p>MP3, WAV, FLAC, M4A, AAC, OGG, Opus, AIFF, WMA and more.<br/>Drop video files too, and the audio will be pulled out.</p>
+        <div class="empty-actions">
+          <button class="btn" id="emptyAdd">Add files</button>
+          <button class="btn ghost" id="emptyFolder">Add folder</button>
+        </div>
+      </div>
+      <div class="drop-overlay" id="dropOverlay"><div>Drop to add</div></div>
+    </section>
+
+    <aside class="settings" id="settings">
+      <div class="s-section">
+        <label class="s-label" for="preset">Preset</label>
+        <select id="preset"></select>
+      </div>
+
+      <div class="s-section">
+        <div class="s-label">Output format</div>
+        <div class="formats" id="formats" role="radiogroup"></div>
+      </div>
+
+      <div class="s-section" id="qualitySection">
+        <div class="s-label">Quality</div>
+        <div id="qualityControls" class="stack"></div>
+      </div>
+
+      <div class="s-section">
+        <div class="row2">
+          <div>
+            <label class="s-sub" for="sampleRate">Sample rate</label>
+            <select id="sampleRate"></select>
+          </div>
+          <div>
+            <label class="s-sub" for="channels">Channels</label>
+            <select id="channels">
+              <option value="original">Same as source</option>
+              <option value="2">Stereo</option>
+              <option value="1">Mono</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <details class="s-section" id="effectsBox">
+        <summary class="s-label">Effects <span class="badge" id="fxBadge" hidden></span></summary>
+        <div class="stack">
+          <div>
+            <label class="s-sub" for="normalize">Normalize loudness</label>
+            <select id="normalize">
+              <option value="off">Off</option>
+              <option value="streaming">Streaming (−14 LUFS)</option>
+              <option value="podcast">Podcast (−16 LUFS)</option>
+              <option value="broadcast">Broadcast (−23 LUFS)</option>
+            </select>
+          </div>
+          <div>
+            <label class="s-sub" for="gainDb">Volume <output id="gainOut">0 dB</output></label>
+            <input type="range" id="gainDb" min="-20" max="20" step="0.5" value="0" />
+          </div>
+          <div class="row2">
+            <div>
+              <label class="s-sub" for="fadeIn">Fade in (sec)</label>
+              <input type="number" id="fadeIn" min="0" max="60" step="0.5" value="0" />
+            </div>
+            <div>
+              <label class="s-sub" for="fadeOut">Fade out (sec)</label>
+              <input type="number" id="fadeOut" min="0" max="60" step="0.5" value="0" />
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="trimSilence" /> Trim silence from start and end</label>
+        </div>
+      </details>
+
+      <details class="s-section" id="outputBox" open>
+        <summary class="s-label">Output</summary>
+        <div class="stack">
+          <div class="radio-row">
+            <label class="check"><input type="radio" name="outputMode" value="source" /> Same folder as the original</label>
+            <label class="check"><input type="radio" name="outputMode" value="folder" /> This folder:</label>
+          </div>
+          <div class="folder-pick">
+            <div class="path" id="outputDirText" title="">Not set</div>
+            <button class="btn small" id="browseOut">Browse…</button>
+          </div>
+          <div class="row2">
+            <div>
+              <label class="s-sub" for="suffix">Add to file name</label>
+              <input type="text" id="suffix" placeholder="e.g. _converted" spellcheck="false" />
+            </div>
+            <div>
+              <label class="s-sub" for="onExists">If file exists</label>
+              <select id="onExists">
+                <option value="rename">Keep both</option>
+                <option value="overwrite">Replace</option>
+                <option value="skip">Skip</option>
+              </select>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="keepMetadata" /> Keep tags (title, artist, album…)</label>
+          <label class="check"><input type="checkbox" id="keepArt" /> Keep album art (MP3, M4A, FLAC)</label>
+          <div>
+            <label class="s-sub" for="concurrency">Convert at once</label>
+            <select id="concurrency"></select>
+          </div>
+        </div>
+      </details>
+
+      <div class="estimate" id="estimate"></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <div class="player" id="player">
+      <button class="icon-btn" id="playBtn" title="Play / pause (Space)" disabled>
+        <svg viewBox="0 0 24 24" class="i-play"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>
+        <svg viewBox="0 0 24 24" class="i-pause"><path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <div class="p-meta">
+        <div class="p-name" id="pName">Nothing playing</div>
+        <input type="range" id="seek" min="0" max="1000" value="0" disabled />
+      </div>
+      <div class="p-time" id="pTime">0:00</div>
+    </div>
+    <div class="overall">
+      <div class="overall-text" id="statusText">Add some files to get started</div>
+      <div class="bar"><div class="bar-fill" id="overallBar"></div></div>
+    </div>
+    <button class="btn small" id="openOut" disabled>Open output folder</button>
+  </footer>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <audio id="audio" preload="metadata"></audio>
+
+  <script src="formats.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

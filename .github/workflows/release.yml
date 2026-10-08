@@ -1,0 +1,64 @@
+name: Build & release
+
+# Push a tag like v1.0.1 to build the Windows and Mac apps and attach them to a
+# GitHub release. "Run workflow" on the Actions tab builds without releasing.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Create the release once up front so the three build jobs don't race to create it.
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release view "$TAG" -R "$REPO" || gh release create "$TAG" -R "$REPO" --title "Audio Converter $TAG" --notes-file - <<< "$NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          NOTES: |
+            **Windows:** download `Audio-Converter-…-Windows-Setup.exe` to install, or `…-Windows-Portable.exe` to run without installing.
+            If Windows says "Windows protected your PC", click **More info → Run anyway**.
+
+            **Mac:** download the `-Mac-arm64.dmg` for Apple Silicon (M1/M2/M3/M4), or `-Mac-x64.dmg` for Intel Macs.
+            Drag the app into Applications. Because the app isn't notarised by Apple, run this once in Terminal before opening it:
+            `xattr -dr com.apple.quarantine "/Applications/Audio Converter.app"`
+
+  build:
+    needs: release
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win --x64
+          - os: macos-latest      # Apple Silicon
+            args: --mac --arm64
+          - os: macos-15-intel    # Intel Macs
+            args: --mac --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npx electron-builder ${{ matrix.args }} --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+          if-no-files-found: error

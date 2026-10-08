@@ -1,0 +1,73 @@
+{
+  "name": "audio-converter",
+  "productName": "Audio Converter",
+  "version": "1.0.0",
+  "description": "Batch audio converter for MP3, WAV, FLAC, AAC, ALAC, OGG, Opus, AIFF and WMA, powered by ffmpeg.",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "local.audioconverter",
+    "productName": "Audio Converter",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.music",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "artifactName": "Audio-Converter-${version}-Mac-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "artifactName": "Audio-Converter-${version}-Linux.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Audio-Converter-${version}-Windows-Setup.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "releaseType": "release"
+    },
+    "portable": {
+      "artifactName": "Audio-Converter-${version}-Windows-Portable.${ext}"
+    },
+    "dmg": {
+      "writeUpdateInfo": false
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bassraljovan/audio-converter.git"
+  }
+}
